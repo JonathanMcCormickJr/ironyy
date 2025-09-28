@@ -1,19 +1,16 @@
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use uuid::Uuid;
-use serde::{ Deserialize, Serialize };
 
-#[repr(u8)]
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum Status {
-    Open = 0,
-    InProgress = 20,
-    Resolved = 240,
-    Closed = 255,
+    Open,
+    InProgress,
+    Resolved,
+    Closed
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Epic {
-    pub uuid: Uuid,
     pub name: String,
     pub description: String,
     pub status: Status,
@@ -22,28 +19,25 @@ pub struct Epic {
 
 impl Epic {
     pub fn new(name: String, description: String) -> Self {
-        Epic {
-            uuid: Uuid::new_v4(),
+        Self {
             name,
             description,
             status: Status::Open,
-            stories: Vec::new(),
+            stories: vec![]
         }
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Story {
-    pub uuid: Uuid,
     pub name: String,
     pub description: String,
     pub status: Status,
 }
 
 impl Story {
-    pub fn new(name: String, description: String, db_state: &mut DBState) -> Self {
-        Story {
-            uuid: Uuid::new_v4(),
+    pub fn new(name: String, description: String) -> Self {
+        Self {
             name,
             description,
             status: Status::Open,
@@ -51,12 +45,9 @@ impl Story {
     }
 }
 
-/// This struct represents the entire db state which includes the last_item_id, epics, and stories
-/// TODO: Convert from u32 to Uuid for all ID tracking
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct DBState {
-    #[serde(alias = "last_item_id")]
-    pub last_item_serial_id: u32,
+    pub last_item_id: u32,
     pub epics: HashMap<u32, Epic>,
-    pub stories: HashMap<u32, Story>,
+    pub stories: HashMap<u32, Story>
 }
