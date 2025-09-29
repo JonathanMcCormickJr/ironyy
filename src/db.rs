@@ -47,7 +47,7 @@ impl JiraDatabase {
         db_state
             .epics
             .get_mut(&epic_id)
-            .ok_or(anyhow::bail!("Error fetching Epid ID"))?
+            .ok_or_else(|| anyhow::anyhow!("Epic with id {} does not exist", epic_id))?
             .stories
             .push(new_id);
 
@@ -61,7 +61,7 @@ impl JiraDatabase {
         let epic = db_state
             .epics
             .remove(&epic_id)
-            .ok_or(anyhow::bail!("Epic with id {} does not exist", epic_id))?;
+            .ok_or_else(|| anyhow::anyhow!("Epic with id {} does not exist", epic_id))?;
 
         for story_id in epic.stories {
             db_state.stories.remove(&story_id);
@@ -77,7 +77,7 @@ impl JiraDatabase {
         let epic = db_state
             .epics
             .get_mut(&epic_id)
-            .ok_or(anyhow::bail!("Epic with id {} does not exist", epic_id))?;
+            .ok_or_else(|| anyhow::anyhow!("Epic with id {} does not exist", epic_id))?;
 
         if !epic.stories.contains(&story_id) {
             anyhow::bail!(
@@ -100,7 +100,7 @@ impl JiraDatabase {
         let epic = db_state
             .epics
             .get_mut(&epic_id)
-            .ok_or(anyhow::bail!("Epic with id {} does not exist", epic_id))?;
+            .ok_or_else(|| anyhow::anyhow!("Epic with id {} does not exist", epic_id))?;
 
         epic.status = status;
 
@@ -114,7 +114,7 @@ impl JiraDatabase {
         let story = db_state
             .stories
             .get_mut(&story_id)
-            .ok_or(anyhow::bail!("Story with id {} does not exist", story_id))?;
+            .ok_or_else(|| anyhow::anyhow!("Story with id {} does not exist", story_id))?;
 
         story.status = status;
 
