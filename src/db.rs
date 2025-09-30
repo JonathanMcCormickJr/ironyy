@@ -1,5 +1,4 @@
-use std::path::Path;
-use std::{any, fs};
+use std::{fs, path::Path};
 
 use anyhow::Result;
 
@@ -25,7 +24,7 @@ impl JiraDatabase {
     }
 
     pub fn create_epic(&self, epic: Epic) -> Result<u32> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
         let new_id = db_state.last_item_id + 1;
         db_state.last_item_id = new_id;
         db_state.epics.insert(new_id, epic);
@@ -35,7 +34,7 @@ impl JiraDatabase {
     }
 
     pub fn create_story(&self, story: Story, epic_id: u32) -> Result<u32> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
 
         if !db_state.epics.contains_key(&epic_id) {
             anyhow::bail!("Epic with id {} does not exist", epic_id);
@@ -56,7 +55,7 @@ impl JiraDatabase {
     }
 
     pub fn delete_epic(&self, epic_id: u32) -> Result<()> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
 
         let epic = db_state
             .epics
@@ -72,7 +71,7 @@ impl JiraDatabase {
     }
 
     pub fn delete_story(&self, epic_id: u32, story_id: u32) -> Result<()> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
 
         let epic = db_state
             .epics
@@ -95,7 +94,7 @@ impl JiraDatabase {
     }
 
     pub fn update_epic_status(&self, epic_id: u32, status: Status) -> Result<()> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
 
         let epic = db_state
             .epics
@@ -109,7 +108,7 @@ impl JiraDatabase {
     }
 
     pub fn update_story_status(&self, story_id: u32, status: Status) -> Result<()> {
-        let mut db_state = self.database.read_db()?;
+        let mut db_state = self.read_db()?;
 
         let story = db_state
             .stories
