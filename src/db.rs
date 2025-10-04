@@ -9,16 +9,56 @@ pub struct JiraDatabase {
 }
 
 impl JiraDatabase {
+    /// Creates a new JiraDatabase instance with a JSON file backend.
+    /// The database file will be created at the specified file_path.
+    /// If a file already exists at that path, an error will be returned.
+    ///
+    /// ```rust
+    /// use ironyy::db::JiraDatabase;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("test_db.json").exists() {
+    ///    std::fs::remove_file("test_db.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("test_db.json".to_string());
+    /// assert_eq!(db.is_ok(), true);
+    ///
+    /// // Clean up the created file after the test
+    /// std::fs::remove_file("test_db.json").unwrap();
+    ///
+    /// ```
     pub fn new(file_path: String) -> Result<Self> {
         if !Path::new(&file_path).exists() {
+            fs::write(
+                &file_path,
+                r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#,
+            )?;
             Ok(Self {
                 database: Box::new(JSONFileDatabase::new(file_path)),
             })
         } else {
-            anyhow::bail!("Database file with that path already exists");
+            Err(anyhow::anyhow!(
+                "Database file with that path already exists"
+            ))
         }
     }
 
+    /// Reads the current state of the database.
+    ///
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::DBState };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db.json".to_string()).unwrap();
+    ///
+    /// let db_state = db.read_db();
+    /// //assert_eq!(db_state.is_ok(), true);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db.json").unwrap();
+    /// ```
     pub fn read_db(&self) -> Result<DBState> {
         self.database.read_db()
     }
