@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::models::{DBState, Epic, Status, Story};
 
+/// Main interface for interacting with the Jira-like database.
 pub struct JiraDatabase {
     database: Box<dyn Database>,
 }
@@ -17,19 +18,33 @@ impl JiraDatabase {
     /// use ironyy::db::JiraDatabase;
     ///
     /// // Remove test file if it exists
-    /// if std::path::Path::new("test_db.json").exists() {
-    ///    std::fs::remove_file("test_db.json").unwrap();
+    /// if std::path::Path::new("test_db_new.json").exists() {
+    ///    std::fs::remove_file("test_db_new.json").unwrap();
     /// }
     ///
-    /// let db = JiraDatabase::new("test_db.json".to_string());
+    /// let db = JiraDatabase::new("test_db_new.json".to_string());
     /// assert_eq!(db.is_ok(), true);
     ///
+    /// let db_state = db.as_ref().unwrap().read_db().unwrap();
+    /// assert_eq!(db_state.last_item_id, 0);
+    /// assert_eq!(db_state.epics.len(), 0);
+    /// assert_eq!(db_state.stories.len(), 0);
+    ///
     /// // Clean up the created file after the test
-    /// std::fs::remove_file("test_db.json").unwrap();
+    /// std::fs::remove_file("test_db_new.json").unwrap();
     ///
     /// ```
     pub fn new(file_path: String) -> Result<Self> {
-        if !Path::new(&file_path).exists() {
+        let path = Path::new(&file_path);
+
+        // Ensure parent directory exists (if any) so fs::write won't fail with NotFound.
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
+        if !path.exists() {
             fs::write(
                 &file_path,
                 r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#,
@@ -51,18 +66,55 @@ impl JiraDatabase {
     /// use std::fs::File;
     /// use std::io::Write;
     ///
-    /// let db = JiraDatabase::new("./test_dir/test_db.json".to_string()).unwrap();
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_read_db.json").exists() {
+    ///  std::fs::remove_file("./test_dir/test_db_read_db.json").unwrap();
+    /// }
     ///
-    /// let db_state = db.read_db();
-    /// //assert_eq!(db_state.is_ok(), true);
+    /// let db = JiraDatabase::new("./test_dir/test_db_read_db.json".to_string()).unwrap();
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state, DBState { last_item_id: 0, epics: std::collections::HashMap::new(), stories: std::collections::HashMap::new() });
     ///
     /// // Delete the file after the test
-    /// std::fs::remove_file("./test_dir/test_db.json").unwrap();
+    /// std::fs::remove_file("./test_dir/test_db_read_db.json").unwrap();
     /// ```
     pub fn read_db(&self) -> Result<DBState> {
         self.database.read_db()
     }
 
+    /// Creates a new epic in the database and returns its ID.
+    ///
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::Epic };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_create_epic.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_create_epic.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_create_epic.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    /// assert_eq!(epic_id, 1);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.last_item_id, 1);
+    /// assert_eq!(db_state.epics.get(&epic_id).is_some(), true);
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().name, "Epic 1");
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().description, "Description of Epic 1");
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().status.to_string(), "Open");
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().stories.len(), 0);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_create_epic.json").unwrap();
+    /// ```
     pub fn create_epic(&self, epic: Epic) -> Result<u32> {
         let mut db_state = self.read_db()?;
         let new_id = db_state.last_item_id + 1;
@@ -73,6 +125,45 @@ impl JiraDatabase {
         Ok(new_id)
     }
 
+    /// Creates a new story in the database under the specified epic and returns the new story's ID.
+    /// If the specified epic does not exist, an error is returned.
+    ///
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::{Epic, Story} };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_create_story.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_create_story.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_create_story.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    /// let story = Story::new("Story 1".to_owned(), "Description of Story 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    ///
+    /// let result = db.create_story(story, epic_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let story_id = result.unwrap();
+    /// assert_eq!(story_id, 2);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.last_item_id, 2);
+    /// assert_eq!(db_state.stories.get(&story_id).is_some(), true);
+    /// assert_eq!(db_state.stories.get(&story_id).unwrap().name, "Story 1");
+    /// assert_eq!(db_state.stories.get(&story_id).unwrap().description, "Description of Story 1");
+    /// assert_eq!(db_state.stories.get(&story_id).unwrap().status.to_string(), "Open");
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().stories.contains(&story_id), true);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_create_story.json").unwrap();
+    /// ```
     pub fn create_story(&self, story: Story, epic_id: u32) -> Result<u32> {
         let mut db_state = self.read_db()?;
 
@@ -94,6 +185,43 @@ impl JiraDatabase {
         Ok(new_id)
     }
 
+    /// Deletes the specified epic and all its associated stories from the database.
+    /// If the specified epic does not exist, an error is returned.
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::{Epic, Story} };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_delete_epic.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_delete_epic.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_delete_epic.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    /// let story = Story::new("Story 1".to_owned(), "Description of Story 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    ///
+    /// let result = db.create_story(story, epic_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let story_id = result.unwrap();
+    ///
+    /// let result = db.delete_epic(epic_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.last_item_id, 2);
+    /// assert_eq!(db_state.epics.get(&epic_id), None);
+    /// assert_eq!(db_state.stories.get(&story_id), None);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_delete_epic.json").unwrap();
+    /// ```
     pub fn delete_epic(&self, epic_id: u32) -> Result<()> {
         let mut db_state = self.read_db()?;
 
@@ -110,6 +238,43 @@ impl JiraDatabase {
         Ok(())
     }
 
+    /// Deletes the specified story from the specified epic in the database.
+    /// If the specified epic or story does not exist, an error is returned.
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::{Epic, Story} };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_delete_story.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_delete_story.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_delete_story.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    /// let story = Story::new("Story 1".to_owned(), "Description of Story 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    ///
+    /// let result = db.create_story(story, epic_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let story_id = result.unwrap();
+    ///
+    /// let result = db.delete_story(epic_id, story_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.last_item_id, 2);
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().stories.contains(&story_id), false);
+    /// assert_eq!(db_state.stories.get(&story_id), None);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_delete_story.json").unwrap();
+    /// ```
     pub fn delete_story(&self, epic_id: u32, story_id: u32) -> Result<()> {
         let mut db_state = self.read_db()?;
 
@@ -133,6 +298,35 @@ impl JiraDatabase {
         Ok(())
     }
 
+    /// Updates the status of the specified epic in the database.
+    /// If the specified epic does not exist, an error is returned.
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::{Epic, Status} };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_update_epic_status.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_update_epic_status.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_update_epic_status.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    ///
+    /// let result = db.update_epic_status(epic_id, Status::Closed);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().status, Status::Closed);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_update_epic_status.json").unwrap();
+    /// ```
     pub fn update_epic_status(&self, epic_id: u32, status: Status) -> Result<()> {
         let mut db_state = self.read_db()?;
 
@@ -147,6 +341,41 @@ impl JiraDatabase {
         Ok(())
     }
 
+    /// Updates the status of the specified story in the database.
+    /// If the specified story does not exist, an error is returned.
+    /// ```rust
+    /// use ironyy::{ db::JiraDatabase, models::{Epic, Story, Status} };
+    /// use std::fs::File;
+    /// use std::io::Write;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("./test_dir/test_db_update_story_status.json").exists() {
+    ///   std::fs::remove_file("./test_dir/test_db_update_story_status.json").unwrap();
+    /// }
+    ///
+    /// let db = JiraDatabase::new("./test_dir/test_db_update_story_status.json".to_string()).unwrap();
+    /// let epic = Epic::new("Epic 1".to_owned(), "Description of Epic 1".to_owned());
+    /// let story = Story::new("Story 1".to_owned(), "Description of Story 1".to_owned());
+    ///
+    /// let result = db.create_epic(epic);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let epic_id = result.unwrap();
+    ///
+    /// let result = db.create_story(story, epic_id);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let story_id = result.unwrap();
+    ///
+    /// let result = db.update_story_status(story_id, Status::Closed);
+    /// assert_eq!(result.is_ok(), true);
+    ///
+    /// let db_state = db.read_db().unwrap();
+    /// assert_eq!(db_state.stories.get(&story_id).unwrap().status, Status::Closed);
+    ///
+    /// // Delete the file after the test
+    /// std::fs::remove_file("./test_dir/test_db_update_story_status.json").unwrap();
+    /// ```
     pub fn update_story_status(&self, story_id: u32, status: Status) -> Result<()> {
         let mut db_state = self.read_db()?;
 
@@ -190,16 +419,20 @@ impl Database for JSONFileDatabase {
     }
 }
 
+/// Mock database implementation for testing purposes.
 pub mod test_utils {
     use std::{cell::RefCell, collections::HashMap};
 
     use super::*;
 
+    /// Mock database that stores the last written state in memory.
+    /// This is useful for unit tests to avoid file I/O.
     pub struct MockDB {
         last_written_state: RefCell<DBState>,
     }
 
     impl MockDB {
+        /// Creates a new MockDB instance with an initial empty state.
         pub fn new() -> Self {
             Self {
                 last_written_state: RefCell::new(DBState {

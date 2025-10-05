@@ -9,6 +9,18 @@ pub enum Status {
     Closed,
 }
 
+impl std::fmt::Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let status_str = match self {
+            Status::Open => "Open",
+            Status::InProgress => "In Progress",
+            Status::Resolved => "Resolved",
+            Status::Closed => "Closed",
+        };
+        write!(f, "{}", status_str)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Epic {
     pub name: String,
