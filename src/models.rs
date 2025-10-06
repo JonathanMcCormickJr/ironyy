@@ -17,10 +17,10 @@ pub enum Status {
 impl std::fmt::Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let status_str = match self {
-            Status::Open => "Open",
-            Status::InProgress => "In Progress",
-            Status::Resolved => "Resolved",
-            Status::Closed => "Closed",
+            Status::Open => "OPEN",
+            Status::InProgress => "IN PROGRESS",
+            Status::Resolved => "RESOLVED",
+            Status::Closed => "CLOSED",
         };
         write!(f, "{}", status_str)
     }
@@ -42,7 +42,7 @@ pub struct Epic {
 impl Epic {
     /// Creates a new epic with the given name and description.
     /// The status is set to `Open` and the stories list is initialized as empty.
-    /// 
+    ///
     /// ```rust
     /// use ironyy::models::{Epic, Status};
     /// let epic = Epic::new("New Epic".to_string(), "This is a new epic".to_string());
@@ -75,7 +75,7 @@ pub struct Story {
 impl Story {
     /// Creates a new story with the given name and description.
     /// The status is set to `Open`.
-    /// 
+    ///
     /// ```rust
     /// use ironyy::models::{Story, Status};
     /// let story = Story::new("New Story".to_string(), "This is a new story".to_string());

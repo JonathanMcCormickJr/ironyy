@@ -109,7 +109,7 @@ impl JiraDatabase {
     /// assert_eq!(db_state.epics.get(&epic_id).is_some(), true);
     /// assert_eq!(db_state.epics.get(&epic_id).unwrap().name, "Epic 1");
     /// assert_eq!(db_state.epics.get(&epic_id).unwrap().description, "Description of Epic 1");
-    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().status.to_string(), "Open");
+    /// assert_eq!(db_state.epics.get(&epic_id).unwrap().status.to_string(), "OPEN");
     /// assert_eq!(db_state.epics.get(&epic_id).unwrap().stories.len(), 0);
     ///
     /// // Delete the file after the test
@@ -158,7 +158,7 @@ impl JiraDatabase {
     /// assert_eq!(db_state.stories.get(&story_id).is_some(), true);
     /// assert_eq!(db_state.stories.get(&story_id).unwrap().name, "Story 1");
     /// assert_eq!(db_state.stories.get(&story_id).unwrap().description, "Description of Story 1");
-    /// assert_eq!(db_state.stories.get(&story_id).unwrap().status.to_string(), "Open");
+    /// assert_eq!(db_state.stories.get(&story_id).unwrap().status.to_string(), "OPEN");
     /// assert_eq!(db_state.epics.get(&epic_id).unwrap().stories.contains(&story_id), true);
     ///
     /// // Delete the file after the test
