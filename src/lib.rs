@@ -11,3 +11,6 @@ pub mod db;
 
 /// Data models for epics, stories, and their statuses.
 pub mod models;
+
+/// User interface components and pages.
+pub mod ui;

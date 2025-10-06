@@ -6,7 +6,7 @@ use crate::models::{DBState, Epic, Status, Story};
 
 /// Main interface for interacting with the Jira-like database.
 pub struct JiraDatabase {
-    database: Box<dyn Database>,
+    pub database: Box<dyn Database>,
 }
 
 impl JiraDatabase {
@@ -391,8 +391,11 @@ impl JiraDatabase {
     }
 }
 
-trait Database {
+/// Trait defining the interface for database backends.
+pub trait Database {
+    /// Reads the current state of the database.
     fn read_db(&self) -> Result<DBState>;
+    /// Writes the given state to the database.
     fn write_db(&self, db_state: &DBState) -> Result<()>;
 }
 

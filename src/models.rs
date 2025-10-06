@@ -1,5 +1,21 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
+
+/// Represents an action that can be performed in the application by the user.
+#[derive(Debug, PartialEq, Eq)]
+#[allow(missing_docs)]
+pub enum Action {
+    NavigateToEpicDetail { epic_id: u32 },
+    NavigateToStoryDetail { epic_id: u32, story_id: u32 },
+    NavigateToPreviousPage,
+    CreateEpic,
+    UpdateEpicStatus { epic_id: u32 },
+    DeleteEpic { epic_id: u32 },
+    CreateStory { epic_id: u32 },
+    UpdateStoryStatus { story_id: u32 },
+    DeleteStory { story_id: u32 },
+    Exit,
+}
 
 /// Represents the status of an epic or story.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -14,7 +30,7 @@ pub enum Status {
     Closed,
 }
 
-impl std::fmt::Display for Status {
+impl Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let status_str = match self {
             Status::Open => "OPEN",
