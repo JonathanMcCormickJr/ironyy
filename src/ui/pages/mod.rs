@@ -29,7 +29,14 @@ impl Page for HomePage {
         let epics = &db_state.epics;
         let epics_formatted_lines: Vec<String> = epics
             .into_iter()
-            .map(|(id, epic)| format!("{} | {} | {}", get_column_string(&id.to_string(), 12), get_column_string(&epic.name, 32), get_column_string(&epic.status.to_string(), 16)))
+            .map(|(id, epic)| {
+                format!(
+                    "{} | {} | {}",
+                    get_column_string(&id.to_string(), 12),
+                    get_column_string(&epic.name, 32),
+                    get_column_string(&epic.status.to_string(), 16)
+                )
+            })
             .sorted()
             .collect();
 
