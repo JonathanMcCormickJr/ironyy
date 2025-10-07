@@ -25,11 +25,21 @@ pub struct HomePage {
 }
 impl Page for HomePage {
     fn draw_page(&self) -> Result<()> {
+        let db_state = self.db.read_db()?;
+        let epics = &db_state.epics;
+        let epics_formatted_lines: Vec<String> = epics
+            .into_iter()
+            .map(|(id, epic)| format!("{} | {} | {}", get_column_string(&id.to_string(), 12), get_column_string(&epic.name, 32), get_column_string(&epic.status.to_string(), 16)))
+            .sorted()
+            .collect();
+
         println!("----------------------------- EPICS -----------------------------");
         println!("     id     |               name               |      status      ");
 
-        // TODO: print out epics using get_column_string(). also make sure the epics are sorted by id
-        
+        for line in epics_formatted_lines {
+            println!("{}", line);
+        }
+
         println!();
         println!();
 
