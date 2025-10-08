@@ -1,7 +1,18 @@
 use ellipse::Ellipse;
 
 pub fn get_column_string(text: &str, width: usize) -> String {
-    text.truncate_ellipse(width).to_string()
+    if width == 0 {
+        return "".to_owned();
+    }
+
+    if text.len() <= width {
+        format!("{:width$}", text, width = width)
+    } else if width <= 3 {
+        ".".repeat(width)
+    } else {
+        let ellipsed = text.truncate_ellipse(width - 3);
+        format!("{}...", &ellipsed[..width - 3])
+    }
 }
 
 #[cfg(test)]
