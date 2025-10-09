@@ -142,37 +142,36 @@ pub struct EpicDetail {
 }
 
 impl Page for EpicDetail {
-
     /// Draws the epic detail page with its stories.
     /// Returns a Result indicating success or failure.
-    /// 
+    ///
     /// ```rust
     /// use ironyy::db::JiraDatabase;
     /// use ironyy::ui::pages::{EpicDetail, Page};
     /// use std::rc::Rc;
-    /// 
+    ///
     /// // Remove test file if it exists
     /// if std::path::Path::new("test_epic_detail_draw_page.json").exists() {
     ///    std::fs::remove_file("test_epic_detail_draw_page.json").unwrap();
     /// }
     /// let jdb = JiraDatabase::new("test_epic_detail_draw_page.json".to_string());
     /// assert_eq!(jdb.is_ok(), true);
-    /// 
+    ///
     /// // Add an epic to the database
     /// let mut epic0 = ironyy::models::Epic::new("Epic - Project 1".to_owned(), "This is Project 1 for the first epic!!!".to_owned());
     /// epic0.status = ironyy::models::Status::InProgress;
     /// jdb.as_ref().unwrap().create_epic(epic0).unwrap();
-    /// 
+    ///
     /// // Add 2 stories to the epic
     /// let story0 = ironyy::models::Story::new("Story - Project 1 Solution".to_owned(), "This is Task 1 for the first story!!!".to_owned());
     /// let story1 = ironyy::models::Story::new("Story - Project 1 README".to_owned(), "This is Task 2 for the first story!!!".to_owned());
     /// jdb.as_ref().unwrap().create_story(story0, 1).unwrap();
     /// jdb.as_ref().unwrap().create_story(story1, 1).unwrap();
-    /// 
+    ///
     /// // Close the first story and resolve the second story
     /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
     /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
-    /// 
+    ///
     /// let page = EpicDetail { epic_id: 1, db: jdb.unwrap().into() };
     /// let draw_result = page.draw_page();
     /// assert_eq!(draw_result.is_ok(), true);
@@ -193,8 +192,12 @@ impl Page for EpicDetail {
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
         let mut vec_of_lines: Vec<String> = Vec::new();
 
-        vec_of_lines.push(String::from("------------------------------ EPIC ------------------------------"));
-        vec_of_lines.push(String::from("  id  |     name     |         description         |    status    "));
+        vec_of_lines.push(String::from(
+            "------------------------------ EPIC ------------------------------",
+        ));
+        vec_of_lines.push(String::from(
+            "  id  |     name     |         description         |    status    ",
+        ));
 
         let db_state = self.db.read_db()?;
         let epic = db_state
@@ -212,8 +215,12 @@ impl Page for EpicDetail {
 
         vec_of_lines.push(String::new());
 
-        vec_of_lines.push(String::from("---------------------------- STORIES ----------------------------"));
-        vec_of_lines.push(String::from("     id     |               name               |      status      "));
+        vec_of_lines.push(String::from(
+            "---------------------------- STORIES ----------------------------",
+        ));
+        vec_of_lines.push(String::from(
+            "     id     |               name               |      status      ",
+        ));
 
         let stories = &db_state.stories;
 
@@ -279,7 +286,6 @@ pub struct StoryDetail {
 }
 
 impl Page for StoryDetail {
-
     /// Draws the story detail page.
     /// Returns a Result indicating success or failure.
     ///
@@ -287,29 +293,29 @@ impl Page for StoryDetail {
     /// use ironyy::db::JiraDatabase;
     /// use ironyy::ui::pages::{StoryDetail, Page};
     /// use std::rc::Rc;
-    /// 
+    ///
     /// // Remove test file if it exists
     /// if std::path::Path::new("test_story_detail_draw_page.json").exists() {
     ///    std::fs::remove_file("test_story_detail_draw_page.json").unwrap();
     /// }
     /// let jdb = JiraDatabase::new("test_story_detail_draw_page.json".to_string());
     /// assert_eq!(jdb.is_ok(), true);
-    /// 
+    ///
     /// // Add an epic to the database
     /// let mut epic0 = ironyy::models::Epic::new("Epic - Project 1".to_owned(), "This is Project 1 for the first epic!!!".to_owned());
     /// epic0.status = ironyy::models::Status::InProgress;
     /// jdb.as_ref().unwrap().create_epic(epic0).unwrap();
-    /// 
+    ///
     /// // Add 2 stories to the epic
     /// let story0 = ironyy::models::Story::new("Story - Project 1 Solution".to_owned(), "Please provide full implementation of this stuff.".to_owned());
     /// let story1 = ironyy::models::Story::new("Story - Project 1 README".to_owned(), "This is Task 2 for the first story!!!".to_owned());
     /// jdb.as_ref().unwrap().create_story(story0, 1).unwrap();
     /// jdb.as_ref().unwrap().create_story(story1, 1).unwrap();
-    /// 
+    ///
     /// // Close the first story and resolve the second story
     /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
     /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
-    /// 
+    ///
     /// let page = StoryDetail { epic_id: 1, story_id: 2, db: jdb.unwrap().into() };
     /// let draw_result = page.draw_page();
     /// assert_eq!(draw_result.is_ok(), true);
@@ -325,8 +331,12 @@ impl Page for StoryDetail {
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
         let mut vec_of_lines: Vec<String> = Vec::new();
 
-        vec_of_lines.push(String::from("------------------------------ STORY ------------------------------"));
-        vec_of_lines.push(String::from("  id  |     name     |         description         |    status    "));
+        vec_of_lines.push(String::from(
+            "------------------------------ STORY ------------------------------",
+        ));
+        vec_of_lines.push(String::from(
+            "  id  |     name     |         description         |    status    ",
+        ));
 
         let db_state = self.db.read_db()?;
         let story = db_state
@@ -344,8 +354,10 @@ impl Page for StoryDetail {
 
         vec_of_lines.push(String::new());
         vec_of_lines.push(String::new());
-        
-        vec_of_lines.push(String::from("[p] previous | [u] update story | [d] delete story"));
+
+        vec_of_lines.push(String::from(
+            "[p] previous | [u] update story | [d] delete story",
+        ));
 
         vec_of_lines.iter().for_each(|line| println!("{}", line));
 
