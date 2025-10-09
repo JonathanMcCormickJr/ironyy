@@ -1,7 +1,7 @@
 use std::rc::Rc;
+use std::vec;
 
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use itertools::Itertools;
 
 use crate::db::JiraDatabase;
@@ -13,7 +13,7 @@ use page_helpers::*;
 /// Trait representing a UI page.
 pub trait Page {
     /// Draws the page to the console.
-    fn draw_page(&self) -> Result<()>;
+    fn draw_page(&self) -> Result<Vec<String>, anyhow::Error>;
     /// Handles user input and returns a result including an optional action.
     fn handle_input(&self, input: &str) -> Result<Option<Action>>;
 }
@@ -24,7 +24,65 @@ pub struct HomePage {
     pub db: Rc<JiraDatabase>,
 }
 impl Page for HomePage {
-    fn draw_page(&self) -> Result<()> {
+    /// Draws the home page with a list of epics.
+    /// Returns a Result indicating success or failure.
+    ///
+    /// ```rust
+    /// use ironyy::db::JiraDatabase;
+    /// use ironyy::ui::pages::{HomePage, Page};
+    /// use std::rc::Rc;
+    ///
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("test_homepage_draw_page.json").exists() {
+    ///    std::fs::remove_file("test_homepage_draw_page.json").unwrap();
+    /// }
+    ///
+    /// let jdb = JiraDatabase::new("test_homepage_draw_page.json".to_string());
+    /// assert_eq!(jdb.is_ok(), true);
+    ///
+    /// // Add an epic to the database
+    /// let mut epic0 = ironyy::models::Epic::new("Epic - Project 1".to_owned(), "This is Project 1 for the first epic!!!".to_owned());
+    /// epic0.status = ironyy::models::Status::InProgress;
+    /// jdb.as_ref().unwrap().create_epic(epic0).unwrap();
+    ///
+    /// // Add 2 stories to the epic
+    /// let story0 = ironyy::models::Story::new("Story - Project 1 Solution".to_owned(), "This is Task 1 for the first story!!!".to_owned());
+    /// let story1 = ironyy::models::Story::new("Story - Project 1 README".to_owned(), "This is Task 2 for the first story!!!".to_owned());
+    /// jdb.as_ref().unwrap().create_story(story0, 1).unwrap();
+    /// jdb.as_ref().unwrap().create_story(story1, 1).unwrap();
+    ///
+    /// // Close the first story and resolve the second story
+    /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
+    /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
+    ///
+    /// // Add another epic to the database
+    /// let epic1 = ironyy::models::Epic::new("Epic - Project 2".to_owned(), "This is Project 2 for the second epic!!!".to_owned());
+    /// jdb.as_ref().unwrap().create_epic(epic1).unwrap();
+    ///
+    /// let page = HomePage { db: jdb.unwrap().into() };
+    /// let draw_result = page.draw_page();
+    /// assert_eq!(draw_result.is_ok(), true);
+    /// assert_eq!(draw_result.unwrap(), vec![
+    ///     "----------------------------- EPICS -----------------------------".to_string(),
+    ///     "     id     |               name               |      status      ".to_string(),
+    ///     "1           | Epic - Project 1                 | IN PROGRESS     ".to_string(),
+    ///     "4           | Epic - Project 2                 | OPEN            ".to_string(),
+    ///     "".to_string(),
+    ///     "".to_string(),
+    ///     "[q] quit | [c] create epic | [:id:] navigate to epic".to_string(),
+    /// ]);
+    ///
+    /// ```
+    fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
+        let mut vec_of_lines: Vec<String> = Vec::new();
+
+        vec_of_lines.push(String::from(
+            "----------------------------- EPICS -----------------------------",
+        ));
+        vec_of_lines.push(String::from(
+            "     id     |               name               |      status      ",
+        ));
+
         let db_state = self.db.read_db()?;
         let epics = &db_state.epics;
         let epics_formatted_lines: Vec<String> = epics
@@ -32,7 +90,7 @@ impl Page for HomePage {
             .map(|(id, epic)| {
                 format!(
                     "{} | {} | {}",
-                    get_column_string(&id.to_string(), 12),
+                    get_column_string(&id.to_string(), 11),
                     get_column_string(&epic.name, 32),
                     get_column_string(&epic.status.to_string(), 16)
                 )
@@ -40,19 +98,19 @@ impl Page for HomePage {
             .sorted()
             .collect();
 
-        println!("----------------------------- EPICS -----------------------------");
-        println!("     id     |               name               |      status      ");
-
         for line in epics_formatted_lines {
-            println!("{}", line);
+            vec_of_lines.push(line);
         }
 
-        println!();
-        println!();
+        vec_of_lines.push(String::new());
+        vec_of_lines.push(String::new());
 
-        println!("[q] quit | [c] create epic | [:id:] navigate to epic");
+        vec_of_lines.push(String::from(
+            "[q] quit | [c] create epic | [:id:] navigate to epic",
+        ));
 
-        Ok(())
+        vec_of_lines.iter().for_each(|line| println!("{}", line));
+        Ok(vec_of_lines)
     }
 
     fn handle_input(&self, input: &str) -> Result<Option<Action>> {
@@ -84,50 +142,102 @@ pub struct EpicDetail {
 }
 
 impl Page for EpicDetail {
-    fn draw_page(&self) -> Result<()> {
+
+    /// Draws the epic detail page with its stories.
+    /// Returns a Result indicating success or failure.
+    /// 
+    /// ```rust
+    /// use ironyy::db::JiraDatabase;
+    /// use ironyy::ui::pages::{EpicDetail, Page};
+    /// use std::rc::Rc;
+    /// 
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("test_epic_detail_draw_page.json").exists() {
+    ///    std::fs::remove_file("test_epic_detail_draw_page.json").unwrap();
+    /// }
+    /// let jdb = JiraDatabase::new("test_epic_detail_draw_page.json".to_string());
+    /// assert_eq!(jdb.is_ok(), true);
+    /// 
+    /// // Add an epic to the database
+    /// let mut epic0 = ironyy::models::Epic::new("Epic - Project 1".to_owned(), "This is Project 1 for the first epic!!!".to_owned());
+    /// epic0.status = ironyy::models::Status::InProgress;
+    /// jdb.as_ref().unwrap().create_epic(epic0).unwrap();
+    /// 
+    /// // Add 2 stories to the epic
+    /// let story0 = ironyy::models::Story::new("Story - Project 1 Solution".to_owned(), "This is Task 1 for the first story!!!".to_owned());
+    /// let story1 = ironyy::models::Story::new("Story - Project 1 README".to_owned(), "This is Task 2 for the first story!!!".to_owned());
+    /// jdb.as_ref().unwrap().create_story(story0, 1).unwrap();
+    /// jdb.as_ref().unwrap().create_story(story1, 1).unwrap();
+    /// 
+    /// // Close the first story and resolve the second story
+    /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
+    /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
+    /// 
+    /// let page = EpicDetail { epic_id: 1, db: jdb.unwrap().into() };
+    /// let draw_result = page.draw_page();
+    /// assert_eq!(draw_result.is_ok(), true);
+    /// assert_eq!(draw_result.unwrap(), vec![
+    ///     "------------------------------ EPIC ------------------------------".to_string(),
+    ///     "  id  |     name     |         description         |    status    ".to_string(),
+    ///     "1     | Epic - Pr... | This is Project 1 for th... | IN PROGRESS ".to_string(),
+    ///     "".to_string(),
+    ///     "---------------------------- STORIES ----------------------------".to_string(),
+    ///     "     id     |               name               |      status      ".to_string(),
+    ///     "2           | Story - Project 1 Solution       | CLOSED          ".to_string(),
+    ///     "3           | Story - Project 1 README         | RESOLVED        ".to_string(),
+    ///     "".to_string(),
+    ///     "".to_string(),
+    ///     "[p] previous | [u] update epic | [d] delete epic | [c] create story | [:id:] navigate to story".to_string()
+    /// ]);
+    /// ```
+    fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
+        let mut vec_of_lines: Vec<String> = Vec::new();
+
+        vec_of_lines.push(String::from("------------------------------ EPIC ------------------------------"));
+        vec_of_lines.push(String::from("  id  |     name     |         description         |    status    "));
+
         let db_state = self.db.read_db()?;
         let epic = db_state
             .epics
             .get(&self.epic_id)
             .ok_or_else(|| anyhow!("could not find epic!"))?;
 
-        println!("------------------------------ EPIC ------------------------------");
-        println!("  id  |     name     |         description         |    status    ");
-
-        println!(
+        vec_of_lines.push(format!(
             "{} | {} | {} | {}",
-            get_column_string(&self.epic_id.to_string(), 4),
+            get_column_string(&self.epic_id.to_string(), 5),
             get_column_string(&epic.name, 12),
             get_column_string(&epic.description, 27),
             get_column_string(&epic.status.to_string(), 12)
-        );
+        ));
 
-        println!();
+        vec_of_lines.push(String::new());
 
-        println!("---------------------------- STORIES ----------------------------");
-        println!("     id     |               name               |      status      ");
+        vec_of_lines.push(String::from("---------------------------- STORIES ----------------------------"));
+        vec_of_lines.push(String::from("     id     |               name               |      status      "));
 
         let stories = &db_state.stories;
 
         for story_id in epic.stories.iter() {
             if let Some(story) = stories.get(story_id) {
-                println!(
+                vec_of_lines.push(format!(
                     "{} | {} | {}",
-                    get_column_string(&story_id.to_string(), 10),
+                    get_column_string(&story_id.to_string(), 11),
                     get_column_string(&story.name, 32),
                     get_column_string(&story.status.to_string(), 16)
-                );
+                ));
             }
         }
 
-        println!();
-        println!();
+        vec_of_lines.push(String::new());
+        vec_of_lines.push(String::new());
 
-        println!(
+        vec_of_lines.push(String::from(
             "[p] previous | [u] update epic | [d] delete epic | [c] create story | [:id:] navigate to story"
-        );
+        ));
 
-        Ok(())
+        vec_of_lines.iter().for_each(|line| println!("{}", line));
+
+        Ok(vec_of_lines)
     }
 
     fn handle_input(&self, input: &str) -> Result<Option<Action>> {
@@ -169,30 +279,77 @@ pub struct StoryDetail {
 }
 
 impl Page for StoryDetail {
-    fn draw_page(&self) -> Result<()> {
+
+    /// Draws the story detail page.
+    /// Returns a Result indicating success or failure.
+    ///
+    /// ```rust
+    /// use ironyy::db::JiraDatabase;
+    /// use ironyy::ui::pages::{StoryDetail, Page};
+    /// use std::rc::Rc;
+    /// 
+    /// // Remove test file if it exists
+    /// if std::path::Path::new("test_story_detail_draw_page.json").exists() {
+    ///    std::fs::remove_file("test_story_detail_draw_page.json").unwrap();
+    /// }
+    /// let jdb = JiraDatabase::new("test_story_detail_draw_page.json".to_string());
+    /// assert_eq!(jdb.is_ok(), true);
+    /// 
+    /// // Add an epic to the database
+    /// let mut epic0 = ironyy::models::Epic::new("Epic - Project 1".to_owned(), "This is Project 1 for the first epic!!!".to_owned());
+    /// epic0.status = ironyy::models::Status::InProgress;
+    /// jdb.as_ref().unwrap().create_epic(epic0).unwrap();
+    /// 
+    /// // Add 2 stories to the epic
+    /// let story0 = ironyy::models::Story::new("Story - Project 1 Solution".to_owned(), "Please provide full implementation of this stuff.".to_owned());
+    /// let story1 = ironyy::models::Story::new("Story - Project 1 README".to_owned(), "This is Task 2 for the first story!!!".to_owned());
+    /// jdb.as_ref().unwrap().create_story(story0, 1).unwrap();
+    /// jdb.as_ref().unwrap().create_story(story1, 1).unwrap();
+    /// 
+    /// // Close the first story and resolve the second story
+    /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
+    /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
+    /// 
+    /// let page = StoryDetail { epic_id: 1, story_id: 2, db: jdb.unwrap().into() };
+    /// let draw_result = page.draw_page();
+    /// assert_eq!(draw_result.is_ok(), true);
+    /// assert_eq!(draw_result.unwrap(), vec![
+    ///     "------------------------------ STORY ------------------------------".to_string(),
+    ///     "  id  |     name     |         description         |    status    ".to_string(),
+    ///     "2     | Story - P... | Please provide full impl... | CLOSED       ".to_string(),
+    ///     "".to_string(),
+    ///     "".to_string(),
+    ///     "[p] previous | [u] update story | [d] delete story".to_string()
+    /// ]);
+    /// ```
+    fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
+        let mut vec_of_lines: Vec<String> = Vec::new();
+
+        vec_of_lines.push(String::from("------------------------------ STORY ------------------------------"));
+        vec_of_lines.push(String::from("  id  |     name     |         description         |    status    "));
+
         let db_state = self.db.read_db()?;
         let story = db_state
             .stories
             .get(&self.story_id)
             .ok_or_else(|| anyhow!("could not find story!"))?;
 
-        println!("------------------------------ STORY ------------------------------");
-        println!("  id  |     name     |         description         |    status    ");
-
-        println!(
+        vec_of_lines.push(format!(
             "{} | {} | {} | {}",
-            get_column_string(&self.story_id.to_string(), 4),
+            get_column_string(&self.story_id.to_string(), 5),
             get_column_string(&story.name, 12),
             get_column_string(&story.description, 27),
-            get_column_string(&story.status.to_string(), 12)
-        );
+            get_column_string(&story.status.to_string(), 13)
+        ));
 
-        println!();
-        println!();
+        vec_of_lines.push(String::new());
+        vec_of_lines.push(String::new());
+        
+        vec_of_lines.push(String::from("[p] previous | [u] update story | [d] delete story"));
 
-        println!("[p] previous | [u] update story | [d] delete story");
+        vec_of_lines.iter().for_each(|line| println!("{}", line));
 
-        Ok(())
+        Ok(vec_of_lines)
     }
 
     fn handle_input(&self, input: &str) -> Result<Option<Action>> {
