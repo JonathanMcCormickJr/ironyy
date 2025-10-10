@@ -15,5 +15,8 @@ pub mod io_utils;
 /// Data models for epics, stories, and their statuses.
 pub mod models;
 
+/// Navigation and page management.
+pub mod navigator;
+
 /// User interface components and pages.
 pub mod ui;
