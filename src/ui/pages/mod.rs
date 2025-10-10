@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::vec;
 
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
@@ -71,6 +70,9 @@ impl Page for HomePage {
     ///     "".to_string(),
     ///     "[q] quit | [c] create epic | [:id:] navigate to epic".to_string(),
     /// ]);
+    /// 
+    /// // Clean up test file
+    /// std::fs::remove_file("test_homepage_draw_page.json").unwrap();
     ///
     /// ```
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
@@ -188,6 +190,9 @@ impl Page for EpicDetail {
     ///     "".to_string(),
     ///     "[p] previous | [u] update epic | [d] delete epic | [c] create story | [:id:] navigate to story".to_string()
     /// ]);
+    /// 
+    /// // Clean up test file
+    /// std::fs::remove_file("test_epic_detail_draw_page.json").unwrap();
     /// ```
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
         let mut vec_of_lines: Vec<String> = Vec::new();
@@ -327,6 +332,9 @@ impl Page for StoryDetail {
     ///     "".to_string(),
     ///     "[p] previous | [u] update story | [d] delete story".to_string()
     /// ]);
+    /// 
+    /// // Clean up test file
+    /// std::fs::remove_file("test_story_detail_draw_page.json").unwrap();
     /// ```
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error> {
         let mut vec_of_lines: Vec<String> = Vec::new();
