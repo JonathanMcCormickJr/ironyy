@@ -389,6 +389,13 @@ impl JiraDatabase {
         self.database.write_db(&db_state)?;
         Ok(())
     }
+
+    pub fn get_epic_id_by_story_id(&self, story_id: u32) -> Result<u32> {
+        let db_state = self.read_db()?;
+        db_state
+            .get_epic_id_by_story_id(story_id)
+            .ok_or_else(|| anyhow::anyhow!("Story with id {} does not exist", story_id))
+    }
 }
 
 /// Trait defining the interface for database backends.

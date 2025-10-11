@@ -118,3 +118,14 @@ pub struct DBState {
     /// A mapping of story IDs to their corresponding `Story` objects.
     pub stories: HashMap<u32, Story>,
 }
+
+impl DBState {
+    pub fn get_epic_id_by_story_id(&self, story_id: u32) -> Option<u32> {
+        for (epic_id, epic) in &self.epics {
+            if epic.stories.contains(&story_id) {
+                return Some(*epic_id);
+            }
+        }
+        None
+    }
+}

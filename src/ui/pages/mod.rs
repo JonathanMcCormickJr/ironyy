@@ -15,6 +15,7 @@ pub trait Page {
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error>;
     /// Handles user input and returns a result including an optional action.
     fn handle_input(&self, input: &str) -> Result<Option<Action>>;
+    /// Returns a reference to self as `Any` for downcasting.
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -291,8 +292,6 @@ impl Page for EpicDetail {
 
 /// The detail page for a specific story, showing its description and status.
 pub struct StoryDetail {
-    /// The ID of the epic that contains this story.
-    pub epic_id: u32,
     /// The ID of the story to display.
     pub story_id: u32,
     /// Reference to the Jira database.
@@ -330,7 +329,7 @@ impl Page for StoryDetail {
     /// jdb.as_ref().unwrap().update_story_status(2, ironyy::models::Status::Closed).unwrap();
     /// jdb.as_ref().unwrap().update_story_status(3, ironyy::models::Status::Resolved).unwrap();
     ///
-    /// let page = StoryDetail { epic_id: 1, story_id: 2, db: jdb.unwrap().into() };
+    /// let page = StoryDetail {story_id: 2, db: jdb.unwrap().into() };
     /// let draw_result = page.draw_page();
     /// assert_eq!(draw_result.is_ok(), true);
     /// assert_eq!(draw_result.unwrap(), vec![
@@ -580,7 +579,6 @@ mod tests {
                 .unwrap();
 
             let page = StoryDetail {
-                epic_id,
                 story_id,
                 db,
             };
@@ -601,7 +599,6 @@ mod tests {
                 .unwrap();
 
             let page = StoryDetail {
-                epic_id,
                 story_id,
                 db,
             };
@@ -622,7 +619,6 @@ mod tests {
                 .unwrap();
 
             let page = StoryDetail {
-                epic_id,
                 story_id: 999,
                 db,
             };
@@ -643,7 +639,6 @@ mod tests {
                 .unwrap();
 
             let page = StoryDetail {
-                epic_id,
                 story_id,
                 db,
             };
