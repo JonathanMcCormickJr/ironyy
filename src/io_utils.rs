@@ -8,3 +8,9 @@ pub fn get_user_input() -> Result<String, io::Error> {
 
     Ok((user_input).trim().to_string())
 }
+
+/// Waits for the user to press Enter.
+pub fn wait_for_key_press() -> Result<(), io::Error> {
+    io::stdin().read_line(&mut String::new())?;
+    Ok(())
+}

@@ -7,7 +7,8 @@ use crate::{ui::{Page, HomePage, EpicDetail, StoryDetail, Prompts}, db::JiraData
 pub struct Navigator {
     pages: Vec<Box<dyn Page>>,
     prompts: Prompts,
-    db: Rc<JiraDatabase>
+    /// Shared reference to the database
+    pub db: Rc<JiraDatabase>
 }
 
 impl Navigator {

@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::{self, Path}};
 
 use anyhow::Result;
 
@@ -56,6 +56,18 @@ impl JiraDatabase {
             Err(anyhow::anyhow!(
                 "Database file with that path already exists"
             ))
+        }
+    }
+
+    /// Creates a new JiraDatabase instance with a JSON file backend.
+    pub fn from(path: String) -> Result<Self> {
+        let path = Path::new(&path);
+        if path.exists() {
+            Ok(Self {
+                database: Box::new(JSONFileDatabase::new(path.to_str().unwrap().to_string())),
+            })
+        } else {
+            Err(anyhow::anyhow!("Database file with that path does not exist"))
         }
     }
 
