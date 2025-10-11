@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{any::Any, rc::Rc};
 
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
@@ -15,6 +15,7 @@ pub trait Page {
     fn draw_page(&self) -> Result<Vec<String>, anyhow::Error>;
     /// Handles user input and returns a result including an optional action.
     fn handle_input(&self, input: &str) -> Result<Option<Action>>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 /// The home page displaying a list of epics.
@@ -132,6 +133,10 @@ impl Page for HomePage {
                 }
             }
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -278,6 +283,10 @@ impl Page for EpicDetail {
             }
         }
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// The detail page for a specific story, showing its description and status.
@@ -383,6 +392,10 @@ impl Page for StoryDetail {
             })),
             _ => Ok(None),
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 

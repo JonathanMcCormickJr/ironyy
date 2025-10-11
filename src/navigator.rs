@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result, Context, Ok};
 use std::rc::Rc;
+use std::any::Any;
 
 use crate::{ui::{Page, HomePage, EpicDetail, StoryDetail, Prompts}, db::JiraDatabase, models::Action};
 
+/// Navigator is responsible for managing the navigation stack of pages.
 pub struct Navigator {
     pages: Vec<Box<dyn Page>>,
     prompts: Prompts,
