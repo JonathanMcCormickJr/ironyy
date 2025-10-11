@@ -1,14 +1,14 @@
 use anyhow::{anyhow, Result, Context, Ok};
 use std::rc::Rc;
 
-use crate::{ui::{Page, HomePage, EpicDetail, StoryDetail, Prompts}, db::JiraDatabase, models::Action};
+use crate::{db::DBState, models::{Action}, ui::{EpicDetail, HomePage, Page, Prompts, StoryDetail}};
 
 /// Navigator is responsible for managing the navigation stack of pages.
 pub struct Navigator {
     pages: Vec<Box<dyn Page>>,
     prompts: Prompts,
     /// Shared reference to the database
-    pub db: Rc<JiraDatabase>
+    pub db: Rc<DBState>,
 }
 
 impl Navigator {

@@ -107,25 +107,3 @@ impl Story {
         }
     }
 }
-
-/// Represents the overall state of the database, including all epics and stories.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct DBState {
-    /// The ID of the last item added to the database.
-    pub last_item_id: u32,
-    /// A mapping of epic IDs to their corresponding `Epic` objects.
-    pub epics: HashMap<u32, Epic>,
-    /// A mapping of story IDs to their corresponding `Story` objects.
-    pub stories: HashMap<u32, Story>,
-}
-
-impl DBState {
-    pub fn get_epic_id_by_story_id(&self, story_id: u32) -> Option<u32> {
-        for (epic_id, epic) in &self.epics {
-            if epic.stories.contains(&story_id) {
-                return Some(*epic_id);
-            }
-        }
-        None
-    }
-}
