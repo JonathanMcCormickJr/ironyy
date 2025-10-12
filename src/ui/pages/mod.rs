@@ -47,8 +47,8 @@ impl Page for HomePage {
         let epics = self.db.read_db()?.epics;
 
         match input {
-            "q" => Ok(Some(Action::Exit)),
-            "c" => Ok(Some(Action::CreateEpic)),
+            "Q" | "q" => Ok(Some(Action::Exit)),
+            "C" | "c" => Ok(Some(Action::CreateEpic)),
             input => {
                 if let Ok(epic_id) = input.parse::<u32>() {
                     if epics.contains_key(&epic_id) {
@@ -112,10 +112,10 @@ impl Page for EpicDetail {
         let stories = db_state.stories;
 
         match input {
-            "p" => Ok(Some(Action::NavigateToPreviousPage)),
-            "u" => Ok(Some(Action::UpdateEpicStatus { epic_id: self.epic_id })),
-            "d" => Ok(Some(Action::DeleteEpic{ epic_id: self.epic_id })),
-            "c" => Ok(Some(Action::CreateStory { epic_id: self.epic_id })),
+            "P" | "p" => Ok(Some(Action::NavigateToPreviousPage)),
+            "U" | "u" => Ok(Some(Action::UpdateEpicStatus { epic_id: self.epic_id })),
+            "D" | "d" => Ok(Some(Action::DeleteEpic{ epic_id: self.epic_id })),
+            "C" | "c" => Ok(Some(Action::CreateStory { epic_id: self.epic_id })),
             input => {
                 if let Ok(story_id) = input.parse::<u32>() {
                     if stories.contains_key(&story_id) {
@@ -161,9 +161,9 @@ impl Page for StoryDetail {
 
     fn handle_input(&self, input: &str) -> Result<Option<Action>> {
         match input {
-            "p" => Ok(Some(Action::NavigateToPreviousPage)),
-            "u" => Ok(Some(Action::UpdateStoryStatus { story_id: self.story_id })),
-            "d" => Ok(Some(Action::DeleteStory { epic_id: self.epic_id, story_id: self.story_id })),
+            "P" | "p" => Ok(Some(Action::NavigateToPreviousPage)),
+            "U" | "u" => Ok(Some(Action::UpdateStoryStatus { story_id: self.story_id })),
+            "D" | "d" => Ok(Some(Action::DeleteStory { epic_id: self.epic_id, story_id: self.story_id })),
             _ => {
                 Ok(None)
             }

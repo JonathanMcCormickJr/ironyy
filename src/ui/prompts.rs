@@ -59,7 +59,7 @@ fn delete_epic_prompt() -> bool {
 
     let input = get_user_input();
 
-    if input.trim().eq("Y") {
+    if input.trim().to_lowercase().eq("y") {
         return true;
     }
 
@@ -73,7 +73,7 @@ fn delete_story_prompt() -> bool {
 
     let input = get_user_input();
 
-    if input.trim().eq("Y") {
+    if input.trim().to_lowercase().eq("y") {
         return true;
     }
 
