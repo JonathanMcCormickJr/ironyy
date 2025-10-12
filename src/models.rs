@@ -8,7 +8,7 @@ pub enum Action {
     NavigateToEpicDetail { epic_id: u32 },
     NavigateToStoryDetail { story_id: u32 },
     NavigateToPreviousPage,
-    CreateEpic,
+    CreateEpic { name: String, description: String },
     UpdateEpicStatus { epic_id: u32 },
     DeleteEpic { epic_id: u32 },
     CreateStory { epic_id: u32 },

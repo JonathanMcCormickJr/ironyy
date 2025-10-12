@@ -33,6 +33,35 @@ impl DBState {
         &self.stories
     }
 
+    /// Creates a DBState instance that is not backed by a JSON file.
+    /// This is ONLY for testing purposes.
+    #[cfg(test)]
+    pub fn new() -> Self {
+        Self {
+            last_item_id: 0,
+            epics: HashMap::new(),
+            stories: HashMap::new(),
+        }
+    }
+
+    /// Set the `last_item_id` field. This is ONLY for testing purposes.
+    #[cfg(test)]
+    pub fn set_last_item_id(&mut self, new_id: u32) {
+        self.last_item_id = new_id;
+    }
+
+    /// Set the `epics` field. This is ONLY for testing purposes.
+    #[cfg(test)]
+    pub fn set_epics(&mut self, new_epics: HashMap<u32, Epic>) {
+        self.epics = new_epics;
+    }
+
+    /// Set the `stories` field. This is ONLY for testing purposes.
+    #[cfg(test)]
+    pub fn set_stories(&mut self, new_stories: HashMap<u32, Story>) {
+        self.stories = new_stories;
+    }
+
     /// Reads the database state from the specified JSON file.
     /// If the file does not exist, it initializes a new database state.
     fn read_db() -> Result<Self> {
@@ -93,12 +122,53 @@ impl DBState {
     }
 
     pub fn update_epic_status(&mut self, epic_id: u32, new_status: Status) -> Result<()> {
-        // TODO
+        if let Some(epic) = self.epics.get_mut(&epic_id) {
+            epic.status = new_status;
+            self.write_db()?;
+        } else {
+            return Err(anyhow!("Epic with ID {} does not exist", epic_id));
+        }
+        Ok(())
     }
 
+    pub fn update_story_status(&mut self, story_id: u32, new_status: Status) -> Result<()> {
+        if let Some(story) = self.stories.get_mut(&story_id) {
+            story.status = new_status;
+            self.write_db()?;
+        } else {
+            return Err(anyhow!("Story with ID {} does not exist", story_id));
+        }
+        Ok(())
+    }
 
+    /// Deletes the specified epic and all its associated stories.
+    pub fn delete_epic(&mut self, epic_id: u32) -> Result<()> {
+        if let Some(epic) = self.epics.remove(&epic_id) {
+            for story_id in epic.stories {
+                self.stories.remove(&story_id);
+            }
+            self.write_db()?;
+            Ok(())
+        } else {
+            Err(anyhow!("Epic with ID {} does not exist", epic_id))
+        }
+    }
 
-    // TODO: Complete CRUD
+    /// Deletes the specified story
+    pub fn delete_story(&mut self, story_id: u32) -> Result<()> {
+        if let Some(epic_id) = self.get_epic_id_by_story_id(story_id) {
+            if let Some(epic) = self.epics.get_mut(&epic_id) {
+                epic.stories.retain(|&id| id != story_id);
+                self.stories.remove(&story_id);
+                self.write_db()?;
+                Ok(())
+            } else {
+                Err(anyhow!("Epic with ID {} does not exist", epic_id))
+            }
+        } else {
+            Err(anyhow!("Story with ID {} does not exist", story_id))
+        }
+    }
 
     /// Looks up the epic ID that contains the given story ID.
     /// Returns `Some(epic_id)` if found, or `None` if the story ID does not exist in any epic.

@@ -1,19 +1,20 @@
 use anyhow::{anyhow, Result, Context, Ok};
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 
 use crate::{db::DBState, models::{Action}, ui::{EpicDetail, HomePage, Page, Prompts, StoryDetail}};
 
 /// Navigator is responsible for managing the navigation stack of pages.
+/// TODO: Simplify all of the actions here
 pub struct Navigator {
     pages: Vec<Box<dyn Page>>,
     prompts: Prompts,
     /// Shared reference to the database
-    pub db: Rc<DBState>,
+    pub db: Rc<RefCell<DBState>>,
 }
 
 impl Navigator {
     /// Creates a new Navigator instance starting at the HomePage.
-    pub fn new(db: Rc<JiraDatabase>) -> Self {
+    pub fn new(db: Rc<RefCell<DBState>>) -> Self {
         let home_page = Box::new(HomePage { db: Rc::clone(&db) });
         Self {
             pages: vec![home_page],
@@ -44,10 +45,9 @@ impl Navigator {
                 // remove the last page from the pages vector
                 self.pages.pop();
             }
-            Action::CreateEpic => {
+            Action::CreateEpic { name, description } => {
                 // prompt the user to create a new epic and persist it in the database
-                let epic = (self.prompts.create_epic)().context("Failed to create epic")?;
-                self.db.create_epic(epic).context("Failed to persist new epic in database")?;
+                self.db.borrow_mut().create_epic(name, description)?;
             }
             Action::UpdateEpicStatus { epic_id } => {
                 // prompt the user to update status and persist it in the database
@@ -78,7 +78,7 @@ impl Navigator {
             Action::DeleteStory { story_id } => {
                 // prompt the user to delete the story and persist it in the database
                 let confirm = (self.prompts.delete_story)().context("Failed to delete story")?;
-                let epic_id = self.db.get_epic_id_by_story_id(story_id)?;
+                let epic_id = self.db.get_epic_id_by_story_id(story_id).ok_or(anyhow!("Epic for story ID {} not found", story_id))?;
                 if confirm {
                     self.db.delete_story(epic_id, story_id).context("Failed to persist story deletion in database")?;
                 }
@@ -105,12 +105,12 @@ impl Navigator {
 
 #[cfg(test)]
 mod tests {
-    use crate::{db::test_utils::MockDB, models::{Epic, Status, Story}};
+    use crate::{models::{Epic, Status, Story}};
     use super::*;
 
     #[test]
     fn should_start_on_home_page() {
-        let db = Rc::new(JiraDatabase { database: Box::new(MockDB::new()) });
+        let db = Rc::new(DBState::new());
         let nav = Navigator::new(db);
 
         assert_eq!(nav.get_page_count(), 1);

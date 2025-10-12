@@ -1,10 +1,9 @@
-use std::{any::Any, rc::Rc};
+use std::{any::Any, rc::Rc, cell::RefCell};
 
 use anyhow::{Result, anyhow};
 use itertools::Itertools;
 
-use crate::db::JiraDatabase;
-use crate::models::Action;
+use crate::{db::DBState, models::Action};
 
 mod page_helpers;
 use page_helpers::*;
@@ -22,7 +21,7 @@ pub trait Page {
 /// The home page displaying a list of epics.
 pub struct HomePage {
     /// Reference to the Jira database.
-    pub db: Rc<JiraDatabase>,
+    pub db: Rc<RefCell<DBState>>,
 }
 impl Page for HomePage {
     /// Draws the home page with a list of epics.
@@ -87,8 +86,9 @@ impl Page for HomePage {
             "     id     |               name               |      status      ",
         ));
 
-        let db_state = self.db.read_db()?;
-        let epics = &db_state.epics;
+        let db_state = Rc::clone(&self.db);
+        let db_ref = db_state.borrow();
+        let epics = db_ref.get_epics();
         let epics_formatted_lines: Vec<String> = epics
             .into_iter()
             .map(|(id, epic)| {
@@ -123,8 +123,8 @@ impl Page for HomePage {
             "c" => Ok(Some(Action::CreateEpic)),
             id_str => {
                 if let Ok(id) = id_str.parse::<u32>() {
-                    let db_state = self.db.read_db()?;
-                    if db_state.epics.contains_key(&id) {
+                    let db_state = Rc::clone(&self.db);
+                    if db_state.borrow().get_epics().contains_key(&id) {
                         Ok(Some(Action::NavigateToEpicDetail { epic_id: id }))
                     } else {
                         Ok(None)
@@ -146,7 +146,7 @@ pub struct EpicDetail {
     /// The ID of the epic to display.
     pub epic_id: u32,
     /// Reference to the Jira database.
-    pub db: Rc<JiraDatabase>,
+    pub db: Rc<RefCell<DBState>>,
 }
 
 impl Page for EpicDetail {
@@ -210,9 +210,9 @@ impl Page for EpicDetail {
             "  id  |     name     |         description         |    status    ",
         ));
 
-        let db_state = self.db.read_db()?;
+        let db_state = Rc::clone(&self.db);
         let epic = db_state
-            .epics
+            .get_epics()
             .get(&self.epic_id)
             .ok_or_else(|| anyhow!("could not find epic!"))?;
 
@@ -233,7 +233,7 @@ impl Page for EpicDetail {
             "     id     |               name               |      status      ",
         ));
 
-        let stories = &db_state.stories;
+        let stories = &db_state.get_stories();
 
         for story_id in epic.stories.iter() {
             if let Some(story) = stories.get(story_id) {
@@ -272,8 +272,8 @@ impl Page for EpicDetail {
             })),
             id_str => {
                 if let Ok(id) = id_str.parse::<u32>() {
-                    let db_state = self.db.read_db()?;
-                    if db_state.stories.contains_key(&id) {
+                    let db_state = Rc::clone(&self.db);
+                    if db_state.get_stories().contains_key(&id) {
                         Ok(Some(Action::NavigateToStoryDetail { story_id: id }))
                     } else {
                         Ok(None)
@@ -295,7 +295,7 @@ pub struct StoryDetail {
     /// The ID of the story to display.
     pub story_id: u32,
     /// Reference to the Jira database.
-    pub db: Rc<JiraDatabase>,
+    pub db: Rc<RefCell<DBState>>,
 }
 
 impl Page for StoryDetail {
@@ -354,9 +354,9 @@ impl Page for StoryDetail {
             "  id  |     name     |         description         |    status    ",
         ));
 
-        let db_state = self.db.read_db()?;
+        let db_state = Rc::clone(&self.db);
         let story = db_state
-            .stories
+            .get_stories()
             .get(&self.story_id)
             .ok_or_else(|| anyhow!("could not find story!"))?;
 
@@ -401,7 +401,6 @@ impl Page for StoryDetail {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::test_utils::MockDB;
     use crate::models::{Epic, Story};
 
     mod home_page {
@@ -409,9 +408,7 @@ mod tests {
 
         #[test]
         fn draw_page_should_not_throw_error() {
-            let db = Rc::new(JiraDatabase {
-                database: Box::new(MockDB::new()),
-            });
+            let db = Rc::new(RefCell::new(DBState::new()));
 
             let page = HomePage { db };
             assert_eq!(page.draw_page().is_ok(), true);
@@ -419,9 +416,7 @@ mod tests {
 
         #[test]
         fn handle_input_should_not_throw_error() {
-            let db = Rc::new(JiraDatabase {
-                database: Box::new(MockDB::new()),
-            });
+            let db = Rc::new(RefCell::new(DBState::new()));
 
             let page = HomePage { db };
             assert_eq!(page.handle_input("").is_ok(), true);
@@ -429,15 +424,13 @@ mod tests {
 
         #[test]
         fn handle_input_should_return_the_correct_actions() {
-            let db = Rc::new(JiraDatabase {
-                database: Box::new(MockDB::new()),
-            });
+            let db = Rc::new(RefCell::new(DBState::new()));
 
-            let epic = Epic::new("".to_owned(), "".to_owned());
+            db.borrow_mut().create_epic("title".to_string(), "description".to_string());
 
-            let epic_id = db.create_epic(epic).unwrap();
+            let epic_id = db.borrow().get_epics().iter().next().unwrap().0;
 
-            let page = HomePage { db };
+            let page = HomePage { db: Rc::clone(&db) };
 
             let q = "q";
             let c = "c";
