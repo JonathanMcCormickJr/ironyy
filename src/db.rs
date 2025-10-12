@@ -1,183 +1,34 @@
-use std::{collections::HashMap, fs, path::{self, Path}};
+use std::path::PathBuf;
+use serde::{Serialize, Deserialize};
 
-use anyhow::{anyhow, Ok, Result};
-use serde::{Deserialize, Serialize};
+use crate::{models::{Epic, Story}};
 
-use crate::models::{ Epic, Status, Story};
-
-/// Represents the overall state of the database, including all epics and stories.
-/// 
-/// If you want to read a specific field, use the corresponding getter method: `get_last_item_id`, `get_epics`, or `get_stories`.
-/// 
-/// All public methods that modify the in-memory database state will automatically persist the changes to the JSON file. Due to this, you don't need to worry about whether your calls to getters will return up-to-date information.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+/// Represents the state of the database, including epics and stories.
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DBState {
-    last_item_id: u32,
-    epics: HashMap<u32, Epic>,
-    stories: HashMap<u32, Story>,
+    persistence_path: PathBuf,
+    epics: Vec<Epic>,
+    stories: Vec<Story>,
 }
 
 impl DBState {
-    /// Returns the `last_item_id` field.
-    pub fn get_last_item_id(&self) -> u32 {
-        self.last_item_id
-    }
-
-    /// Returns a reference to the `epics` HashMap.
-    pub fn get_epics(&self) -> &HashMap<u32, Epic> {
-        &self.epics
-    }
-
-    /// Returns a reference to the `stories` HashMap.
-    pub fn get_stories(&self) -> &HashMap<u32, Story> {
-        &self.stories
-    }
-
-    /// Creates a DBState instance that is not backed by a JSON file.
-    /// This is ONLY for testing purposes.
-    #[cfg(test)]
-    pub fn new() -> Self {
-        Self {
-            last_item_id: 0,
-            epics: HashMap::new(),
-            stories: HashMap::new(),
-        }
-    }
-
-    /// Set the `last_item_id` field. This is ONLY for testing purposes.
-    #[cfg(test)]
-    pub fn set_last_item_id(&mut self, new_id: u32) {
-        self.last_item_id = new_id;
-    }
-
-    /// Set the `epics` field. This is ONLY for testing purposes.
-    #[cfg(test)]
-    pub fn set_epics(&mut self, new_epics: HashMap<u32, Epic>) {
-        self.epics = new_epics;
-    }
-
-    /// Set the `stories` field. This is ONLY for testing purposes.
-    #[cfg(test)]
-    pub fn set_stories(&mut self, new_stories: HashMap<u32, Story>) {
-        self.stories = new_stories;
-    }
-
-    /// Reads the database state from the specified JSON file.
-    /// If the file does not exist, it initializes a new database state.
-    fn read_db() -> Result<Self> {
-        let db_path = Path::new("../data/db.json");
-        if db_path.exists() {
-            let db_content = fs::read_to_string(db_path)?;
-            let db_state: Self = serde_json::from_str(&db_content)?;
-            Ok(db_state)
-        } else {
-            // If the file does not exist, then create the file and initialize an empty database state
-            if let Some(parent) = db_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(db_path, "{}")?;
-            Ok(Self {
-                last_item_id: 0,
-                epics: HashMap::new(),
-                stories: HashMap::new(),
-            })
-        }
-    }
-
-    /// Writes the current database state to the specified JSON file.
-    fn write_db(&self) -> Result<()> {
-        let db_path = Path::new("../data/db.json");
-        if let Some(parent) = db_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let db_content = serde_json::to_string_pretty(self)?;
-        fs::write(db_path, db_content)?;
-        Ok(())
-    }
-
-    /// Create a new epic with the given title and description.
-    pub fn create_epic(&mut self, title: String, description: String) -> Result<()> {
-        self.last_item_id += 1;
-        let epic = Epic::new(title, description);
-        self.epics.insert(self.last_item_id, epic);
-        self.write_db()?;
-        Ok(())
-    }
-
-    /// Create a new story under the specified epic with the given title and description.
-    /// 
-    /// Failure results in the DBState being reverted to the current contents of the JSON file.
-    pub fn create_story(&mut self, epic_id: u32, title: String, description: String) -> Result<()> {
-        if let Some(epic) = self.epics.get_mut(&epic_id) {
-            self.last_item_id += 1;
-            let story = Story::new(title, description);
-            epic.stories.push(self.last_item_id);
-            self.stories.insert(self.last_item_id, story);
-            self.write_db()?;
-            Ok(())
-        } else {
-            *self = Self::read_db()?;
-            Err(anyhow::anyhow!("Epic with ID {} does not exist", epic_id))
-        }
-    }
-
-    pub fn update_epic_status(&mut self, epic_id: u32, new_status: Status) -> Result<()> {
-        if let Some(epic) = self.epics.get_mut(&epic_id) {
-            epic.status = new_status;
-            self.write_db()?;
-        } else {
-            return Err(anyhow!("Epic with ID {} does not exist", epic_id));
-        }
-        Ok(())
-    }
-
-    pub fn update_story_status(&mut self, story_id: u32, new_status: Status) -> Result<()> {
-        if let Some(story) = self.stories.get_mut(&story_id) {
-            story.status = new_status;
-            self.write_db()?;
-        } else {
-            return Err(anyhow!("Story with ID {} does not exist", story_id));
-        }
-        Ok(())
-    }
-
-    /// Deletes the specified epic and all its associated stories.
-    pub fn delete_epic(&mut self, epic_id: u32) -> Result<()> {
-        if let Some(epic) = self.epics.remove(&epic_id) {
-            for story_id in epic.stories {
-                self.stories.remove(&story_id);
-            }
-            self.write_db()?;
-            Ok(())
-        } else {
-            Err(anyhow!("Epic with ID {} does not exist", epic_id))
-        }
-    }
-
-    /// Deletes the specified story
-    pub fn delete_story(&mut self, story_id: u32) -> Result<()> {
-        if let Some(epic_id) = self.get_epic_id_by_story_id(story_id) {
-            if let Some(epic) = self.epics.get_mut(&epic_id) {
-                epic.stories.retain(|&id| id != story_id);
-                self.stories.remove(&story_id);
-                self.write_db()?;
-                Ok(())
-            } else {
-                Err(anyhow!("Epic with ID {} does not exist", epic_id))
+    /// Creates a DBState instance from a given file path. 
+    /// If the file does not exist, it creates the file and 
+    /// initializes an empty state
+    pub fn from(path: PathBuf) -> Self {
+        // Read the file if it exists, otherwise create it
+        if let Ok(contents) = std::fs::read_to_string(&path) {
+            if let Ok(state) = serde_json::from_str::<DBState>(&contents) {
+                return state;
             }
         } else {
-            Err(anyhow!("Story with ID {} does not exist", story_id))
+            // Create the file if it doesn't exist
+            std::fs::File::create(&path).expect("Failed to create the database file");
         }
-    }
-
-    /// Looks up the epic ID that contains the given story ID.
-    /// Returns `Some(epic_id)` if found, or `None` if the story ID does not exist in any epic.
-    pub fn get_epic_id_by_story_id(&self, story_id: u32) -> Option<u32> {
-        for (epic_id, epic) in &self.epics {
-            if epic.stories.contains(&story_id) {
-                return Some(*epic_id);
-            }
+        DBState {
+            persistence_path: path,
+            epics: Vec::new(),
+            stories: Vec::new(),
         }
-        None
     }
 }

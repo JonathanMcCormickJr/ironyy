@@ -1,22 +1,28 @@
-#![warn(missing_docs)]
-#![warn(clippy::missing_docs_in_private_items)]
+#![forbid(missing_docs)]
+#![forbid(unsafe_code)]
+
 
 //! # Ironyy
-//! A simple command-line tool for managing epics and stories in a project.
-//! It allows you to create, update, and view epics and stories, as well as track their
-//! status. The data is stored in a JSON file for easy access and modification.
+//! 
+//! Ironyy is a command-line tool for project management.
+//! 
 
-/// Database operations and interactions.
-pub mod db;
+mod cli;
+mod db;
+mod models;
+mod nav;
 
-/// Input/output utility functions.
-pub mod io_utils;
+/// Run the Ironyy application.
+pub fn run() {
+    use std::path::PathBuf;
+    use crate::db::DBState;
+    
+    // TODO: Implement the main application logic here.
+    
+    // Load the database state
+    let path: PathBuf = "data.json".into();
+    let db_state = DBState::from(path);
 
-/// Data models for epics, stories, and their statuses.
-pub mod models;
+    // Initialize the CLI and begin program loop
 
-/// Navigation and page management.
-pub mod navigator;
-
-/// User interface components and pages.
-pub mod ui;
+}
