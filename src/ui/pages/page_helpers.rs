@@ -14,7 +14,7 @@ pub fn get_column_string(text: &str, width: usize) -> String {
             }
 
             column_string
-        },
+        }
         std::cmp::Ordering::Greater => {
             if width == 0 {
                 return "".to_owned();
@@ -25,9 +25,9 @@ pub fn get_column_string(text: &str, width: usize) -> String {
             } else if width == 3 {
                 return "...".to_owned();
             }
-            let result = text.truncate_ellipse(width-3);
+            let result = text.truncate_ellipse(width - 3);
             result.to_string()
-        },
+        }
     }
 }
 
@@ -68,5 +68,5 @@ mod tests {
         assert_eq!(get_column_string(text2, width), "test  ".to_owned());
         assert_eq!(get_column_string(text3, width), "testme".to_owned());
         assert_eq!(get_column_string(text4, width), "tes...".to_owned());
-    } 
+    }
 }

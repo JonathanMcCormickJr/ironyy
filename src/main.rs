@@ -1,5 +1,8 @@
 use std::rc::Rc;
 
+mod auth;
+use auth::*;
+
 mod models;
 
 mod db;
@@ -42,7 +45,10 @@ fn main() {
                 Ok(action) => {
                     if let Some(action) = action {
                         if let Err(error) = navigator.handle_action(action) {
-                            println!("Error handling processing user input: {}\nPress any key to continue...", error);
+                            println!(
+                                "Error handling processing user input: {}\nPress any key to continue...",
+                                error
+                            );
                             wait_for_key_press();
                         }
                     }

@@ -5,9 +5,9 @@ A CLI project management tool.
 Written by Jonathan McCormick Jr. and LGR as part of Jonathan's studies with the LGR Rust Developer Bootcamp.
 
 ## TODO
-- Implement a client-server architecture with a REST API.
+- Simplify the logic using the below Deviances section to eliminate unnecessary complexity.
 - Implement user accounts, login/logout, and data ownership, including passwords and TOTP.
-- Implement password-backed, PQ, E2E encryption.
+- Implement password-backed, PQ encryption.
 
 
 ## Deviances

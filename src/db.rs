@@ -1,6 +1,6 @@
 use std::fs;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::models::{DBState, Epic, Status, Story};
 
