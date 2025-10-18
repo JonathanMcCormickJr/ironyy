@@ -10,6 +10,7 @@ use crate::models::Action;
 
 mod page_helpers;
 use page_helpers::*;
+use crate::constants::APP_NAME;
 
 pub trait Page {
     fn draw_page(&self) -> Result<()>;
@@ -64,6 +65,8 @@ pub struct HomePage {
 }
 impl Page for HomePage {
     fn draw_page(&self) -> Result<()> {
+        println!("Welcome to {}!", APP_NAME);
+        println!();
         println!("----------------------------- EPICS -----------------------------");
         println!("     id     |               name               |      status      ");
 

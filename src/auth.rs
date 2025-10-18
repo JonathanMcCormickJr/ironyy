@@ -7,6 +7,8 @@ use rand::{TryRngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::constants::APP_NAME;
+
 pub struct User {
     username: String,
     uuid: Uuid,
@@ -39,35 +41,45 @@ impl User {
         )
         .expect("Failed to generate app-wide User hashing params properly")
     }
-    fn hash(uuid: Uuid, pass_num: u32, password: String) -> String {
-        let salt = password_hash::SaltString::from_b64(
+    fn hash(uuid: Uuid, pass_num: u32, password: String) -> Result<String, anyhow::Error> {
+        let salt_result = password_hash::SaltString::from_b64(
             &BASE64_STANDARD_NO_PAD.encode((format!("{uuid}{pass_num}")).as_bytes()),
-        )
-        .expect("Failed to create SaltString from Uuid. ");
+        );
+        let salt;
+        match salt_result {
+            Ok(s) => salt = s,
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "Failed to generate salt for password hashing: {}",
+                    e
+                ))
+            }
+        }
 
-        Argon2::new(Self::HASH_ALGO, Self::HASH_VERSION, Self::hash_params())
+        let hash  = Argon2::new(Self::HASH_ALGO, Self::HASH_VERSION, Self::hash_params())
             .hash_password(password.as_bytes(), &salt)
-            .expect("Failed to hash password. ")
-            .to_string()
+            .map_err(|e| anyhow::anyhow!("Failed to hash password: {}", e))?;
+
+        Ok(hash.to_string())
     }
 
-    pub fn new(username: String, password: String) -> Self {
+    pub fn new(username: String, password: String) -> Result<Self, anyhow::Error> {
         let uuid = Uuid::new_v4();
         let password_number = 0;
-        let password_hash = Self::hash(uuid, password_number, password);
+        let password_hash = Self::hash(uuid, password_number, password)?;
 
-        Self {
+        Ok(Self {
             username,
             uuid,
             password_hash,
             password_number,
             totp_secret: None,
-        }
+        })
     }
 
     pub fn enable_2fa(&mut self) -> Result<(), anyhow::Error> {
         let raw_secret = generate_random_secret()?;
-        let issuer = Some(String::from("Ironyy"));
+        let issuer = Some(String::from(APP_NAME));
         let account_name = self.username.clone();
 
         let my_qr_code = EasyTotp::create_qr_png(raw_secret.clone(), issuer, account_name)
@@ -78,6 +90,12 @@ impl User {
             my_qr_code
         );
         Ok(())
+    }
+
+    pub fn verify_password(&self, password_attempt: String) -> Result<bool, anyhow::Error> {
+        let reference_hash = self.password_hash.clone();
+        let attempt_hash = Self::hash(self.uuid, self.password_number, password_attempt)?;
+        Ok(reference_hash == attempt_hash)
     }
 }
 
