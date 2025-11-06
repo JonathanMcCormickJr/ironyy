@@ -1,23 +1,6 @@
 use std::rc::Rc;
 
-mod auth;
-use auth::*;
-
-mod constants;
-use constants::*;
-
-mod models;
-
-mod db;
-use db::*;
-
-mod ui;
-
-mod io_utils;
-use io_utils::*;
-
-mod navigator;
-use navigator::*;
+use ironyy::{auth::*, constants::*, db::*, io_utils::*, navigator::*};
 
 fn main() {
     let db = Rc::new(JiraDatabase::new("./data/db.json".to_owned()));
