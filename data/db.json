@@ -1,1 +1,1 @@
-{"last_item_id":6,"epics":{"6":{"name":"pops","description":"pospsofibvajd9fbnajhdb","status":"Closed","stories":[]},"4":{"name":"Hiya","description":"Uncle Roger","status":"Open","stories":[]}},"stories":{}}
+{"last_item_id":7,"epics":{"4":{"name":"Hiya","description":"Uncle Roger","status":"Open","stories":[]},"6":{"name":"pops","description":"pospsofibvajd9fbnajhdb","status":"Closed","stories":[7]}},"stories":{"7":{"name":"sudo","description":"root","status":"InProgress"}}}

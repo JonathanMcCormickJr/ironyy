@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use ironyy::{auth::*, constants::*, db::*, io_utils::*, navigator::*};
+use ironyy::{auth, constants, db, io_utils, navigator};
 
 fn main() {
-    let db = Rc::new(JiraDatabase::new("./data/db.json".to_owned()));
-    let mut navigator = Navigator::new(Rc::clone(&db));
+    let db = Rc::new(db::JiraDatabase::new("./data/db.json".to_owned()));
+    let mut navigator = navigator::Navigator::new(Rc::clone(&db));
 
     loop {
         clearscreen::clear().unwrap();
@@ -15,10 +15,10 @@ fn main() {
                     "Error rendering page: {}\nPress any key to continue...",
                     error
                 );
-                wait_for_key_press();
+                io_utils::wait_for_key_press();
             };
 
-            let user_input = get_user_input();
+            let user_input = io_utils::get_user_input();
 
             match page.handle_input(user_input.trim()) {
                 Err(error) => {
@@ -26,7 +26,7 @@ fn main() {
                         "Error getting user input: {}\nPress any key to continue...",
                         error
                     );
-                    wait_for_key_press();
+                    io_utils::wait_for_key_press();
                 }
                 Ok(action) => {
                     if let Some(action) = action {
@@ -35,7 +35,7 @@ fn main() {
                                 "Error handling processing user input: {}\nPress any key to continue...",
                                 error
                             );
-                            wait_for_key_press();
+                            io_utils::wait_for_key_press();
                         }
                     }
                 }
